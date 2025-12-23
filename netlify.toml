@@ -3,6 +3,11 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[build.environment]
+  NODE_VERSION = "20"
+  # Ensure optional native deps (e.g. Rollup platform binaries) are installed.
+  NPM_FLAGS = "--include=optional"
+
 [[redirects]]
   from = "/api/health"
   to = "/.netlify/functions/health"
