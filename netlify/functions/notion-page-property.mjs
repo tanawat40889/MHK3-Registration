@@ -17,10 +17,10 @@ function getToken() {
   return token
 }
 
-function pageIdFromPath(pathname) {
-  // /api/notion/pages/<pageId>/property
-  const m = pathname.match(/^\/api\/notion\/pages\/([^/]+)\/property$/)
-  return m ? decodeURIComponent(m[1]) : null
+function getPageId(event) {
+  const qp = event.queryStringParameters || {}
+  if (typeof qp.pageId === 'string' && qp.pageId.trim()) return qp.pageId.trim()
+  return null
 }
 
 export async function handler(event) {
@@ -30,7 +30,7 @@ export async function handler(event) {
   const token = getToken()
   if (!token) return json(500, { error: 'Missing NOTION_TOKEN (set as Netlify env var).' })
 
-  const pageId = pageIdFromPath(event.path || '')
+  const pageId = getPageId(event)
   if (!pageId) return json(400, { error: 'Missing pageId in URL' })
 
   let payload

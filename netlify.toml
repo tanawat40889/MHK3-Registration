@@ -14,6 +14,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/notion/scan"
+  to = "/.netlify/functions/notion-scan"
+  status = 200
+
+[[redirects]]
   from = "/api/notion/pages/*/property"
-  to = "/.netlify/functions/notion-page-property"
+  to = "/.netlify/functions/notion-page-property?pageId=:splat"
   status = 200

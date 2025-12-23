@@ -226,6 +226,53 @@ body {
   color: rgba(238, 242, 255, 0.7);
 }
 
+.modal {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 0;
+  width: min(520px, calc(100% - 24px));
+  background: rgba(11, 16, 32, 0.92);
+  color: #eef2ff;
+}
+
+.modal::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.modalBody {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modalIcon {
+  width: 100%;
+  text-align: center;
+  font-size: 72px;
+  line-height: 1;
+  font-weight: 700;
+  opacity: 0.95;
+}
+
+.modal[data-status='success'] .modalIcon {
+  color: #22c55e;
+  transform: scale(1.02);
+}
+
+.modal[data-status='error'] .modalIcon {
+  color: #ef4444;
+  transform: scale(1.02);
+}
+
+.modalStatus {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(238, 242, 255, 0.9);
+  white-space: pre-wrap;
+  text-align: center;
+}
+
 @media (min-width: 900px) {
   .scanner {
     height: 220px;

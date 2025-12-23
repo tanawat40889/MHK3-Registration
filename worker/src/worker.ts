@@ -76,25 +76,29 @@ function getPlainTitleFromPage(page: any): string {
   return ''
 }
 
-function buildPropertyUpdate(type: string, value: string): any {
+function buildPropertyUpdate(type: string, value: unknown): any {
   switch (type) {
     case 'title':
-      return { title: [{ text: { content: value } }] }
+      return { title: [{ text: { content: String(value ?? '') } }] }
     case 'rich_text':
-      return { rich_text: [{ text: { content: value } }] }
+      return { rich_text: [{ text: { content: String(value ?? '') } }] }
     case 'number': {
-      const n = Number(value)
+      const n = typeof value === 'number' ? value : Number(String(value ?? ''))
       if (Number.isNaN(n)) throw new Error(`Value is not a number: ${value}`)
       return { number: n }
     }
     case 'checkbox':
-      return { checkbox: value === 'true' || value === '1' || value.toLowerCase() === 'yes' }
+      if (typeof value === 'boolean') return { checkbox: value }
+      {
+        const s = String(value ?? '').toLowerCase()
+        return { checkbox: s === 'true' || s === '1' || s === 'yes' }
+      }
     case 'select':
-      return { select: value ? { name: value } : null }
+      return { select: value ? { name: String(value) } : null }
     case 'status':
-      return { status: value ? { name: value } : null }
+      return { status: value ? { name: String(value) } : null }
     case 'date':
-      return { date: value ? { start: value } : null }
+      return { date: value ? { start: String(value) } : null }
     default:
       throw new Error(`Property type not supported by this endpoint: ${type}`)
   }
@@ -163,8 +167,8 @@ export default {
         if (!propertyName || typeof propertyName !== 'string') {
           return json({ error: 'propertyName is required' }, { status: 400, headers: corsHeaders(req, env) })
         }
-        if (typeof value !== 'string') {
-          return json({ error: 'value must be a string' }, { status: 400, headers: corsHeaders(req, env) })
+        if (value === undefined) {
+          return json({ error: 'value is required' }, { status: 400, headers: corsHeaders(req, env) })
         }
 
         const page = await notionFetch(env, `/pages/${pageId}`, { method: 'GET' })

@@ -9,15 +9,12 @@ type AppElements = {
   status: HTMLParagraphElement
   resultText: HTMLTextAreaElement
   format: HTMLSpanElement
-
-  notionQuery: HTMLInputElement
-  notionSearchButton: HTMLButtonElement
-  notionResults: HTMLDivElement
-  notionPageId: HTMLInputElement
-  notionProperty: HTMLInputElement
-  notionValue: HTMLInputElement
-  notionUpdateButton: HTMLButtonElement
   notionStatus: HTMLParagraphElement
+
+  statusDialog: HTMLDialogElement
+  dialogIcon: HTMLDivElement
+  dialogStatus: HTMLParagraphElement
+  dialogClearButton: HTMLButtonElement
 }
 
 const appRoot = document.querySelector<HTMLDivElement>('#app')
@@ -41,10 +38,10 @@ appRoot.innerHTML = `
       </div>
 
       <div class="buttons buttons-spaced">
-        <button id="clear" type="button" class="btn btn-wide">Clear</button>
+        <button id="clear" type="button" class="btn btn-wide">ลงทะเบียนต่อ</button>
       </div>
 
-      <p id="status" class="status" role="status">Ready.</p>
+      <p id="status" class="status" role="status">พร้อมสำหรับสแกน.</p>
 
       <div class="result">
         <div class="resultHeader">
@@ -62,41 +59,17 @@ appRoot.innerHTML = `
 
       <p class="hint">Tip: เพื่อให้ระบบสามารถทำงานได้ โปรดอนุญาตการเข้าถึงกล้องและใช้แสงสว่างเพียงพอ</p>
 
-      <div class="notion">
-        <div class="notionHeader">
-          <span class="resultLabel">Notion</span>
-          <span class="resultMeta">(server-side token)</span>
-        </div>
-
-        <div class="field">
-          <label class="label" for="notionQuery">Search page</label>
-          <div class="row">
-            <input id="notionQuery" class="input" placeholder="Type page title…" />
-            <button id="notionSearch" type="button" class="btn">Search</button>
-          </div>
-          <div id="notionResults" class="results"></div>
-        </div>
-
-        <div class="field">
-          <label class="label" for="notionPageId">Page ID</label>
-          <input id="notionPageId" class="input" placeholder="Paste Notion page id…" />
-        </div>
-
-        <div class="field">
-          <label class="label" for="notionProperty">Property name</label>
-          <input id="notionProperty" class="input" placeholder="e.g. Barcode" />
-        </div>
-
-        <div class="field">
-          <label class="label" for="notionValue">Value</label>
-          <input id="notionValue" class="input" placeholder="Defaults to scanned value" />
-        </div>
-
-        <button id="notionUpdate" type="button" class="btn btn-primary btn-wide">Update Notion</button>
-        <p id="notionStatus" class="status" role="status"></p>
-      </div>
+      <p id="notionStatus" class="status" role="status">กำลังรอ…</p>
     </section>
   </main>
+
+  <dialog id="statusDialog" class="modal" aria-label="Status">
+    <div class="modalBody">
+      <div id="dialogIcon" class="modalIcon" aria-hidden="true">—</div>
+      <p id="dialogStatus" class="modalStatus">—</p>
+      <button id="dialogClear" type="button" class="btn btn-primary btn-wide">ล้างค่า</button>
+    </div>
+  </dialog>
 `
 
 function getEls(): AppElements {
@@ -107,15 +80,12 @@ function getEls(): AppElements {
   const status = document.querySelector<HTMLParagraphElement>('#status')
   const resultText = document.querySelector<HTMLTextAreaElement>('#resultText')
   const format = document.querySelector<HTMLSpanElement>('#format')
-
-  const notionQuery = document.querySelector<HTMLInputElement>('#notionQuery')
-  const notionSearchButton = document.querySelector<HTMLButtonElement>('#notionSearch')
-  const notionResults = document.querySelector<HTMLDivElement>('#notionResults')
-  const notionPageId = document.querySelector<HTMLInputElement>('#notionPageId')
-  const notionProperty = document.querySelector<HTMLInputElement>('#notionProperty')
-  const notionValue = document.querySelector<HTMLInputElement>('#notionValue')
-  const notionUpdateButton = document.querySelector<HTMLButtonElement>('#notionUpdate')
   const notionStatus = document.querySelector<HTMLParagraphElement>('#notionStatus')
+
+  const statusDialog = document.querySelector<HTMLDialogElement>('#statusDialog')
+  const dialogIcon = document.querySelector<HTMLDivElement>('#dialogIcon')
+  const dialogStatus = document.querySelector<HTMLParagraphElement>('#dialogStatus')
+  const dialogClearButton = document.querySelector<HTMLButtonElement>('#dialogClear')
 
   if (
     !scanner ||
@@ -125,14 +95,11 @@ function getEls(): AppElements {
     !status ||
     !resultText ||
     !format ||
-    !notionQuery ||
-    !notionSearchButton ||
-    !notionResults ||
-    !notionPageId ||
-    !notionProperty ||
-    !notionValue ||
-    !notionUpdateButton ||
-    !notionStatus
+    !notionStatus ||
+    !statusDialog ||
+    !dialogIcon ||
+    !dialogStatus ||
+    !dialogClearButton
   ) {
     throw new Error('Failed to initialize UI elements')
   }
@@ -145,14 +112,58 @@ function getEls(): AppElements {
     status,
     resultText,
     format,
-    notionQuery,
-    notionSearchButton,
-    notionResults,
-    notionPageId,
-    notionProperty,
-    notionValue,
-    notionUpdateButton,
     notionStatus,
+
+    statusDialog,
+    dialogIcon,
+    dialogStatus,
+    dialogClearButton,
+  }
+}
+
+function showStatusDialog(els: AppElements, kind: 'success' | 'error', message: string) {
+  els.statusDialog.dataset.status = kind
+  els.dialogIcon.textContent = kind === 'success' ? '✓' : '✕'
+  els.dialogStatus.textContent = message
+  try {
+    if (!els.statusDialog.open) els.statusDialog.showModal()
+  } catch {
+    // If <dialog> isn't supported, fall back silently.
+  }
+}
+
+let syncInFlight = false
+let lastSyncedValue: string | null = null
+
+async function syncScannedIdToNotion(els: AppElements, scannedId: string) {
+  const value = scannedId.trim()
+  if (!value) return
+
+  // Avoid spamming Notion on repeated detections.
+  if (syncInFlight) return
+  if (lastSyncedValue === value) return
+
+  syncInFlight = true
+  els.notionStatus.textContent = `กำลังลงทะเบียน ${value}…`
+
+  try {
+    const data = await apiFetch('/api/notion/scan', {
+      method: 'POST',
+      body: JSON.stringify({ id: value }),
+    })
+
+    lastSyncedValue = value
+    const msg = `ผ่าน: ลงทะเบียน ID ${value} เรียบร้อยแล้ว \nกด “ล้างค่า” เพื่อสแกนรายการถัดไป`
+    els.notionStatus.textContent = msg
+    showStatusDialog(els, 'success', msg)
+  } catch (e) {
+    // Avoid spamming the same failing request repeatedly while the camera keeps detecting.
+    lastSyncedValue = value
+    const msg = `ไม่ผ่าน: ${(e as Error).message}\nกด “ล้างค่า” แล้วลองสแกนใหม่อีกครั้ง`
+    els.notionStatus.textContent = msg
+    showStatusDialog(els, 'error', msg)
+  } finally {
+    syncInFlight = false
   }
 }
 
@@ -188,6 +199,12 @@ async function apiFetch(path: string, init?: RequestInit) {
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
+    const isLocalApi = API_BASE.startsWith('http://localhost:') || API_BASE.startsWith('http://127.0.0.1:')
+    if (isLocalApi) {
+      throw new Error(
+        `Request failed (${msg}). If you're running locally, start the API server: \"npm run api\" (and ensure NOTION_TOKEN is set in .env).`,
+      )
+    }
     throw new Error(
       `Request blocked/failed (${msg}). If you're hosting on Neocities, update your site Content Security Policy to allow connect-src ${API_BASE || "<your-api-domain>"}.`,
     )
@@ -218,6 +235,25 @@ let isRunning = false
 let lastValue: string | null = null
 let lastSeenAt = 0
 let detectedHandler: ((data: any) => void) | null = null
+
+function clearAll(els: AppElements) {
+  els.resultText.value = ''
+  els.format.textContent = '—'
+  els.status.textContent = 'พร้อมสำหรับสแกน.'
+  els.notionStatus.textContent = 'กำลังรอ…'
+  lastValue = null
+  lastSyncedValue = null
+
+  els.statusDialog.dataset.status = ''
+  els.dialogIcon.textContent = '—'
+  els.dialogStatus.textContent = '—'
+
+  try {
+    els.statusDialog.close()
+  } catch {
+    // ignore
+  }
+}
 
 async function startScanner(els: AppElements) {
   if (isRunning) return
@@ -281,6 +317,8 @@ async function startScanner(els: AppElements) {
       els.resultText.value = code
       els.format.textContent = normalizeFormat(formatRaw)
       els.status.textContent = 'Decoded.'
+
+      void syncScannedIdToNotion(els, code)
     }
 
     ;(Quagga as any).onDetected(detectedHandler)
@@ -323,78 +361,13 @@ function stopScanner(els: AppElements) {
 const els = getEls()
 
 els.clearButton.addEventListener('click', () => {
-  els.resultText.value = ''
-  els.format.textContent = '—'
-  els.status.textContent = 'Ready.'
+  clearAll(els)
 })
+
+els.dialogClearButton.addEventListener('click', () => clearAll(els))
 
 els.startButton.addEventListener('click', () => void startScanner(els))
 els.stopButton.addEventListener('click', () => stopScanner(els))
-
-els.notionSearchButton.addEventListener('click', () => void notionSearch(els))
-els.notionUpdateButton.addEventListener('click', () => void notionUpdate(els))
-
-async function notionSearch(els: AppElements) {
-  const q = els.notionQuery.value.trim()
-  if (!q) return
-
-  els.notionStatus.textContent = 'Searching…'
-  els.notionResults.replaceChildren()
-
-  try {
-    const data = await apiFetch('/api/notion/search', {
-      method: 'POST',
-      body: JSON.stringify({ query: q, page_size: 5 }),
-    })
-
-    const results: Array<{ id: string; title: string; url: string }> = data.results ?? []
-    if (results.length === 0) {
-      els.notionStatus.textContent = 'No pages found.'
-      return
-    }
-
-    for (const r of results) {
-      const btn = document.createElement('button')
-      btn.type = 'button'
-      btn.className = 'pick'
-      btn.textContent = r.title ? `${r.title} (${r.id})` : r.id
-      btn.addEventListener('click', () => {
-        els.notionPageId.value = r.id
-        els.notionStatus.textContent = 'Selected page.'
-      })
-      els.notionResults.appendChild(btn)
-    }
-    els.notionStatus.textContent = 'Pick a page from results.'
-  } catch (e) {
-    els.notionStatus.textContent = (e as Error).message
-  }
-}
-
-async function notionUpdate(els: AppElements) {
-  const pageId = els.notionPageId.value.trim()
-  const propertyName = els.notionProperty.value.trim()
-  const value = (els.notionValue.value.trim() || els.resultText.value.trim())
-
-  if (!pageId || !propertyName) {
-    els.notionStatus.textContent = 'Please fill Page ID and Property name.'
-    return
-  }
-  if (!value) {
-    els.notionStatus.textContent = 'No value to update (scan first or type a value).'
-    return
-  }
-
-  els.notionStatus.textContent = 'Updating…'
-  try {
-    const data = await apiFetch(`/api/notion/pages/${encodeURIComponent(pageId)}/property`, {
-      method: 'PATCH',
-      body: JSON.stringify({ propertyName, value }),
-    })
-    els.notionStatus.textContent = `Updated (${data.type}).`
-  } catch (e) {
-    els.notionStatus.textContent = (e as Error).message
-  }
-}
 
 // Auto-start if permission already granted (still needs user gesture on many browsers).
 void (async () => {

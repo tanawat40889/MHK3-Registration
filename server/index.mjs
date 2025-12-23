@@ -38,6 +38,12 @@ function getPlainTitle(page) {
   return ''
 }
 
+function normalizeForMatch(value) {
+  return String(value ?? '')
+    .trim()
+    .replace(/\s+/g, '')
+}
+
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true })
 })
@@ -69,6 +75,61 @@ app.post('/api/notion/search', async (req, res) => {
   }
 })
 
+// Scan flow: given an 8-digit id, find matching page and set checkbox property "2025-WD" to true.
+app.post('/api/notion/scan', async (req, res) => {
+  try {
+    const { id } = req.body ?? {}
+    if (!id || typeof id !== 'string') {
+      res.status(400).json({ error: 'id is required' })
+      return
+    }
+
+    const scannedId = id.trim()
+    const response = await notion.search({
+      query: scannedId,
+      page_size: 20,
+      filter: { value: 'page', property: 'object' },
+    })
+
+    const results = (response.results ?? []).map((p) => ({
+      id: p.id,
+      title: getPlainTitle(p),
+      url: p.url,
+    }))
+
+    const target = normalizeForMatch(scannedId)
+    const exactMatches = results.filter((r) => normalizeForMatch(r.title) === target)
+
+    if (exactMatches.length === 0) {
+      res.status(404).json({
+        error: `No exact title match for id ${scannedId}`,
+        resultsCount: results.length,
+        hint: 'Make sure the Notion page title is exactly the scanned 8-digit id.',
+      })
+      return
+    }
+    if (exactMatches.length > 1) {
+      res.status(409).json({
+        error: `Multiple pages match id ${scannedId}`,
+        matches: exactMatches.map((m) => ({ id: m.id, title: m.title, url: m.url })),
+      })
+      return
+    }
+
+    const page = exactMatches[0]
+    const updated = await notion.pages.update({
+      page_id: page.id,
+      properties: {
+        '2025-WD': { checkbox: true },
+      },
+    })
+
+    res.json({ ok: true, scannedId, pageId: updated.id, title: page.title })
+  } catch (e) {
+    res.status(500).json({ error: e?.message ?? String(e) })
+  }
+})
+
 // Update a single page property by name, using the page’s current property type
 app.patch('/api/notion/pages/:pageId/property', async (req, res) => {
   try {
@@ -83,8 +144,8 @@ app.patch('/api/notion/pages/:pageId/property', async (req, res) => {
       res.status(400).json({ error: 'propertyName is required' })
       return
     }
-    if (typeof value !== 'string') {
-      res.status(400).json({ error: 'value must be a string' })
+    if (value === undefined) {
+      res.status(400).json({ error: 'value is required' })
       return
     }
 
@@ -102,13 +163,13 @@ app.patch('/api/notion/pages/:pageId/property', async (req, res) => {
 
     switch (type) {
       case 'title':
-        typed = { title: [{ text: { content: value } }] }
+        typed = { title: [{ text: { content: String(value ?? '') } }] }
         break
       case 'rich_text':
-        typed = { rich_text: [{ text: { content: value } }] }
+        typed = { rich_text: [{ text: { content: String(value ?? '') } }] }
         break
       case 'number': {
-        const n = Number(value)
+        const n = typeof value === 'number' ? value : Number(String(value ?? ''))
         if (Number.isNaN(n)) {
           res.status(400).json({ error: `Value is not a number: ${value}` })
           return
@@ -117,17 +178,22 @@ app.patch('/api/notion/pages/:pageId/property', async (req, res) => {
         break
       }
       case 'checkbox':
-        typed = { checkbox: value === 'true' || value === '1' || value.toLowerCase() === 'yes' }
+        if (typeof value === 'boolean') {
+          typed = { checkbox: value }
+        } else {
+          const s = String(value ?? '').toLowerCase()
+          typed = { checkbox: s === 'true' || s === '1' || s === 'yes' }
+        }
         break
       case 'select':
-        typed = { select: value ? { name: value } : null }
+        typed = { select: value ? { name: String(value) } : null }
         break
       case 'status':
-        typed = { status: value ? { name: value } : null }
+        typed = { status: value ? { name: String(value) } : null }
         break
       case 'date':
         // Accept ISO date or date-time string
-        typed = { date: value ? { start: value } : null }
+        typed = { date: value ? { start: String(value) } : null }
         break
       default:
         res.status(400).json({
