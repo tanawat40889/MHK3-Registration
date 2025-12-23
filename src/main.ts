@@ -153,7 +153,12 @@ async function syncScannedIdToNotion(els: AppElements, scannedId: string) {
     })
 
     lastSyncedValue = value
-    const msg = `ผ่าน: ลงทะเบียน ID ${value} เรียบร้อยแล้ว \nกด “ล้างค่า” เพื่อสแกนรายการถัดไป`
+    const pageId =
+      data && typeof (data as any).pageId === 'string' && (data as any).pageId.trim()
+        ? (data as any).pageId.trim()
+        : ''
+    const msg = `ผ่าน: ลงทะเบียน ID ${value} เรียบร้อยแล้ว${pageId ? ` (pageId: ${pageId})` : ''}
+กด “ล้างค่า” เพื่อสแกนรายการถัดไป`
     els.notionStatus.textContent = msg
     showStatusDialog(els, 'success', msg)
   } catch (e) {
