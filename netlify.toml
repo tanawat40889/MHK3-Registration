@@ -1,0 +1,19 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/health"
+  to = "/.netlify/functions/health"
+  status = 200
+
+[[redirects]]
+  from = "/api/notion/search"
+  to = "/.netlify/functions/notion-search"
+  status = 200
+
+[[redirects]]
+  from = "/api/notion/pages/*/property"
+  to = "/.netlify/functions/notion-page-property"
+  status = 200

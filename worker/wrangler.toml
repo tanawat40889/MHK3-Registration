@@ -1,0 +1,11 @@
+name = "bkk11-notion-proxy"
+main = "src/worker.ts"
+compatibility_date = "2025-12-23"
+
+# Set NOTION_TOKEN as a secret:
+#   npx wrangler secret put NOTION_TOKEN
+#
+# Optional: lock CORS to your Neocities domain:
+#   npx wrangler secret put ALLOWED_ORIGIN
+# and set it to something like:
+#   https://bkk11.neocities.org
