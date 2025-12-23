@@ -62,7 +62,6 @@ body {
 .scanner {
   position: relative;
   width: 100%;
-  height: min(62vh, 520px);
   background: #060816;
 }
 
