@@ -121,10 +121,13 @@ function getEls(): AppElements {
   }
 }
 
-function showStatusDialog(els: AppElements, kind: 'success' | 'error', message: string) {
+function showStatusDialog(els: AppElements, kind: 'success' | 'error' | 'loading', message: string) {
   els.statusDialog.dataset.status = kind
-  els.dialogIcon.textContent = kind === 'success' ? '✓' : '✕'
+  els.statusDialog.setAttribute('aria-busy', kind === 'loading' ? 'true' : 'false')
+  els.dialogIcon.textContent = kind === 'success' ? '✓' : kind === 'error' ? '✕' : '⏳'
   els.dialogStatus.textContent = message
+  els.dialogClearButton.hidden = kind === 'loading'
+  els.dialogClearButton.disabled = kind === 'loading'
   try {
     if (!els.statusDialog.open) els.statusDialog.showModal()
   } catch {
@@ -145,6 +148,7 @@ async function syncScannedIdToNotion(els: AppElements, scannedId: string) {
 
   syncInFlight = true
   els.notionStatus.textContent = `กำลังลงทะเบียน ${value}…`
+  showStatusDialog(els, 'loading', 'ระบบกำลังดำเนินการ กรุณารอสักครู่')
 
   try {
     const data = await apiFetch('/api/notion/scan', {
@@ -250,8 +254,11 @@ function clearAll(els: AppElements) {
   lastSyncedValue = null
 
   els.statusDialog.dataset.status = ''
+  els.statusDialog.setAttribute('aria-busy', 'false')
   els.dialogIcon.textContent = '—'
   els.dialogStatus.textContent = '—'
+  els.dialogClearButton.hidden = false
+  els.dialogClearButton.disabled = false
 
   try {
     els.statusDialog.close()
@@ -364,6 +371,11 @@ function stopScanner(els: AppElements) {
 }
 
 const els = getEls()
+
+els.statusDialog.addEventListener('cancel', (e) => {
+  // Keep the dialog open while a request is in flight.
+  if (els.statusDialog.dataset.status === 'loading') e.preventDefault()
+})
 
 els.clearButton.addEventListener('click', () => {
   clearAll(els)

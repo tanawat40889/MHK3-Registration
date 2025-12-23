@@ -265,6 +265,10 @@ body {
   transform: scale(1.02);
 }
 
+.modal[data-status='loading'] .modalIcon {
+  opacity: 0.85;
+}
+
 .modalStatus {
   margin: 0;
   font-size: 14px;
