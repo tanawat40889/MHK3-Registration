@@ -22,14 +22,33 @@ Neocities only hosts static files (it cannot run Node/Express). To use the Notio
 This repo includes a Cloudflare Worker backend in [worker/src/worker.ts](worker/src/worker.ts) that exposes:
 
 - `POST /api/notion/search`
+- `POST /api/notion/scan`
 - `PATCH /api/notion/pages/:pageId/property`
 
 ### Deploy backend (Cloudflare Worker)
+
+Prereqs:
+
+- Node.js **20+** (Wrangler v4 requires Node >= 20)
+- On Apple Silicon (M1/M2/etc): avoid mixing x64 (Rosetta) and arm64 Node installs when running `wrangler`.
 
 From the repo root:
 
 ```bash
 cd worker
+npx wrangler@latest deploy
+```
+
+If you hit an error like:
+
+"You installed workerd on another platform than the one you're currently using"
+
+It usually means you switched Node architecture (arm64 ↔ x64) between runs.
+Fix by clearing the `npx` cache and re-running under the architecture you want:
+
+```bash
+rm -rf ~/.npm/_npx
+npx wrangler@latest --version
 npx wrangler@latest deploy
 ```
 
