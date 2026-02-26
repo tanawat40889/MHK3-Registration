@@ -5,7 +5,8 @@ type AppElements = {
   scanner: HTMLDivElement
   startButton: HTMLButtonElement
   stopButton: HTMLButtonElement
-  clearButton: HTMLButtonElement
+  manualIdInput: HTMLInputElement
+  manualSubmitButton: HTMLButtonElement
   status: HTMLParagraphElement
   resultText: HTMLTextAreaElement
   format: HTMLSpanElement
@@ -37,8 +38,18 @@ appRoot.innerHTML = `
         <button id="stop" type="button" class="btn" disabled>Stop</button>
       </div>
 
-      <div class="buttons buttons-spaced">
-        <button id="clear" type="button" class="btn btn-wide">ลงทะเบียนต่อ</button>
+      <div class="field" aria-label="Manual input">
+        <span class="label">กรอกหมายเลข 8 หลัก (กรณีกล้องใช้ไม่ได้)</span>
+        <div class="row">
+          <input
+            id="manualId"
+            class="input"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            placeholder="เช่น 66552126"
+          />
+          <button id="manualSubmit" type="button" class="btn btn-primary">ลงทะเบียน</button>
+        </div>
       </div>
 
       <p id="status" class="status" role="status">พร้อมสำหรับสแกน.</p>
@@ -76,7 +87,8 @@ function getEls(): AppElements {
   const scanner = document.querySelector<HTMLDivElement>('#scanner')
   const startButton = document.querySelector<HTMLButtonElement>('#start')
   const stopButton = document.querySelector<HTMLButtonElement>('#stop')
-  const clearButton = document.querySelector<HTMLButtonElement>('#clear')
+  const manualIdInput = document.querySelector<HTMLInputElement>('#manualId')
+  const manualSubmitButton = document.querySelector<HTMLButtonElement>('#manualSubmit')
   const status = document.querySelector<HTMLParagraphElement>('#status')
   const resultText = document.querySelector<HTMLTextAreaElement>('#resultText')
   const format = document.querySelector<HTMLSpanElement>('#format')
@@ -91,7 +103,8 @@ function getEls(): AppElements {
     !scanner ||
     !startButton ||
     !stopButton ||
-    !clearButton ||
+    !manualIdInput ||
+    !manualSubmitButton ||
     !status ||
     !resultText ||
     !format ||
@@ -108,7 +121,8 @@ function getEls(): AppElements {
     scanner,
     startButton,
     stopButton,
-    clearButton,
+    manualIdInput,
+    manualSubmitButton,
     status,
     resultText,
     format,
@@ -262,11 +276,22 @@ let lastValue: string | null = null
 let lastSeenAt = 0
 let detectedHandler: ((data: any) => void) | null = null
 
+function submitManualId(els: AppElements) {
+  const value = els.manualIdInput.value.trim()
+  if (!value) return
+
+  els.resultText.value = value
+  els.format.textContent = 'MANUAL'
+  els.status.textContent = 'Manual entry.'
+  void syncScannedIdToNotion(els, value)
+}
+
 function clearAll(els: AppElements) {
   els.resultText.value = ''
   els.format.textContent = '—'
   els.status.textContent = 'พร้อมสำหรับสแกน.'
   els.notionStatus.textContent = 'กำลังรอ…'
+  els.manualIdInput.value = ''
   lastValue = null
   lastSyncedValue = null
 
@@ -394,11 +419,12 @@ els.statusDialog.addEventListener('cancel', (e) => {
   if (els.statusDialog.dataset.status === 'loading') e.preventDefault()
 })
 
-els.clearButton.addEventListener('click', () => {
-  clearAll(els)
-})
-
 els.dialogClearButton.addEventListener('click', () => clearAll(els))
+
+els.manualSubmitButton.addEventListener('click', () => submitManualId(els))
+els.manualIdInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitManualId(els)
+})
 
 els.startButton.addEventListener('click', () => void startScanner(els))
 els.stopButton.addEventListener('click', () => stopScanner(els))
