@@ -37,6 +37,10 @@ appRoot.innerHTML = `
         <button id="stop" type="button" class="btn" disabled>Stop</button>
       </div>
 
+      <div class="buttons buttons-spaced">
+        <button id="clear" type="button" class="btn btn-wide">ลงทะเบียนต่อ</button>
+      </div>
+
       <p id="status" class="status" role="status">พร้อมสำหรับสแกน.</p>
 
       <div class="result">
