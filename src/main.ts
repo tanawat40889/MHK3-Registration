@@ -157,11 +157,28 @@ async function syncScannedIdToNotion(els: AppElements, scannedId: string) {
     })
 
     lastSyncedValue = value
-    const pageId =
-      data && typeof (data as any).pageId === 'string' && (data as any).pageId.trim()
-        ? (data as any).pageId.trim()
+    const firstName =
+      data && typeof (data as any).firstName === 'string' && (data as any).firstName.trim()
+        ? (data as any).firstName.trim()
         : ''
-    const msg = `ผ่าน: ลงทะเบียน ID ${value} เรียบร้อยแล้ว${pageId ? ` (pageId: ${pageId})` : ''}
+    const lastName =
+      data && typeof (data as any).lastName === 'string' && (data as any).lastName.trim()
+        ? (data as any).lastName.trim()
+        : ''
+    const apiFullName =
+      data && typeof (data as any).fullName === 'string' && (data as any).fullName.trim()
+        ? (data as any).fullName.trim()
+        : ''
+    const fullName = apiFullName || [firstName, lastName].filter(Boolean).join(' ').trim()
+    const nameLine = fullName ? `\nชื่อ-สกุล: ${fullName}` : ''
+
+    const doc =
+      data && typeof (data as any).doc === 'string' && (data as any).doc.trim() ? (data as any).doc.trim() : ''
+    const docDisplay =
+      doc.toLowerCase() === 'true' ? '✓' : doc.toLowerCase() === 'false' ? '✕' : doc
+    const docLine = docDisplay ? `\nDoc: ${docDisplay}` : ''
+
+    const msg = `ผ่าน: ลงทะเบียน ID ${value} เรียบร้อยแล้ว${nameLine}${docLine}
 กด “ล้างค่า” เพื่อสแกนรายการถัดไป`
     els.notionStatus.textContent = msg
     showStatusDialog(els, 'success', msg)
