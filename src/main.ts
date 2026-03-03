@@ -217,11 +217,11 @@ async function syncScannedIdToNotion(els: AppElements, scannedId: string) {
       data && typeof (data as any).doc === 'string' && (data as any).doc.trim() ? (data as any).doc.trim() : ''
     const docDisplay =
       doc.toLowerCase() === 'true' ? '✓' : doc.toLowerCase() === 'false' ? '✕' : doc
-    const docLine = docDisplay ? `\nรับเอกสาร: ${docDisplay}` : ''
+    const docLine = docDisplay ? '' : ''
 
     setDocCallout(els, doc)
 
-    const msg = `ผ่าน: ลงทะเบียน ID ${value} เรียบร้อยแล้ว${nameLine}
+    const msg = `ผ่าน: ลงทะเบียน ID ${value} เรียบร้อยแล้ว${nameLine}${docLine}
 กด “ย้อนกลับ” เพื่อสแกนรายการถัดไป`
     els.notionStatus.textContent = msg
     showStatusDialog(els, 'success', msg)
