@@ -277,6 +277,37 @@ body {
   text-align: center;
 }
 
+.docCallout {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 700;
+}
+
+.docCalloutLabel {
+  font-size: 14px;
+  color: rgba(238, 242, 255, 0.85);
+}
+
+.docCalloutIcon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.docCallout[data-value='true'] .docCalloutIcon {
+  color: #22c55e;
+}
+
+.docCallout[data-value='false'] .docCalloutIcon {
+  color: #ef4444;
+}
+
 @media (min-width: 900px) {
   .scanner {
     height: 220px;

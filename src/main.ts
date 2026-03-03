@@ -15,6 +15,7 @@ type AppElements = {
   statusDialog: HTMLDialogElement
   dialogIcon: HTMLDivElement
   dialogStatus: HTMLParagraphElement
+  dialogDoc: HTMLDivElement
   dialogClearButton: HTMLButtonElement
 }
 
@@ -78,7 +79,11 @@ appRoot.innerHTML = `
     <div class="modalBody">
       <div id="dialogIcon" class="modalIcon" aria-hidden="true">—</div>
       <p id="dialogStatus" class="modalStatus">—</p>
-      <button id="dialogClear" type="button" class="btn btn-primary btn-wide">ล้างค่า</button>
+      <div id="dialogDoc" class="docCallout" hidden>
+        <span class="docCalloutLabel">รับเอกสาร</span>
+        <span id="dialogDocIcon" class="docCalloutIcon" aria-hidden="true">—</span>
+      </div>
+      <button id="dialogClear" type="button" class="btn btn-primary btn-wide">ย้อนกลับ</button>
     </div>
   </dialog>
 `
@@ -97,6 +102,7 @@ function getEls(): AppElements {
   const statusDialog = document.querySelector<HTMLDialogElement>('#statusDialog')
   const dialogIcon = document.querySelector<HTMLDivElement>('#dialogIcon')
   const dialogStatus = document.querySelector<HTMLParagraphElement>('#dialogStatus')
+  const dialogDoc = document.querySelector<HTMLDivElement>('#dialogDoc')
   const dialogClearButton = document.querySelector<HTMLButtonElement>('#dialogClear')
 
   if (
@@ -112,6 +118,7 @@ function getEls(): AppElements {
     !statusDialog ||
     !dialogIcon ||
     !dialogStatus ||
+    !dialogDoc ||
     !dialogClearButton
   ) {
     throw new Error('Failed to initialize UI elements')
@@ -131,8 +138,25 @@ function getEls(): AppElements {
     statusDialog,
     dialogIcon,
     dialogStatus,
+    dialogDoc,
     dialogClearButton,
   }
+}
+
+function setDocCallout(els: AppElements, docValue: string) {
+  const doc = String(docValue ?? '').trim()
+  if (!doc) {
+    els.dialogDoc.hidden = true
+    return
+  }
+
+  const icon = els.dialogDoc.querySelector<HTMLSpanElement>('#dialogDocIcon')
+  if (icon) {
+    const v = doc.toLowerCase()
+    icon.textContent = v === 'true' ? '✓' : v === 'false' ? '✕' : doc
+  }
+  els.dialogDoc.hidden = false
+  els.dialogDoc.dataset.value = doc.toLowerCase()
 }
 
 function showStatusDialog(els: AppElements, kind: 'success' | 'error' | 'loading', message: string) {
@@ -190,16 +214,19 @@ async function syncScannedIdToNotion(els: AppElements, scannedId: string) {
       data && typeof (data as any).doc === 'string' && (data as any).doc.trim() ? (data as any).doc.trim() : ''
     const docDisplay =
       doc.toLowerCase() === 'true' ? '✓' : doc.toLowerCase() === 'false' ? '✕' : doc
-    const docLine = docDisplay ? `\nDoc: ${docDisplay}` : ''
+    const docLine = docDisplay ? `\nรับเอกสาร: ${docDisplay}` : ''
+
+    setDocCallout(els, doc)
 
     const msg = `ผ่าน: ลงทะเบียน ID ${value} เรียบร้อยแล้ว${nameLine}${docLine}
-กด “ล้างค่า” เพื่อสแกนรายการถัดไป`
+กด “ย้อนกลับ” เพื่อสแกนรายการถัดไป`
     els.notionStatus.textContent = msg
     showStatusDialog(els, 'success', msg)
   } catch (e) {
+    setDocCallout(els, '')
     // Avoid spamming the same failing request repeatedly while the camera keeps detecting.
     lastSyncedValue = value
-    const msg = `ไม่ผ่าน: ${(e as Error).message}\nกด “ล้างค่า” แล้วลองสแกนใหม่อีกครั้ง`
+    const msg = `ไม่ผ่าน: ${(e as Error).message}\nกด “ย้อนกลับ” แล้วลองสแกนใหม่อีกครั้ง`
     els.notionStatus.textContent = msg
     showStatusDialog(els, 'error', msg)
   } finally {
@@ -299,6 +326,7 @@ function clearAll(els: AppElements) {
   els.statusDialog.setAttribute('aria-busy', 'false')
   els.dialogIcon.textContent = '—'
   els.dialogStatus.textContent = '—'
+  setDocCallout(els, '')
   els.dialogClearButton.hidden = false
   els.dialogClearButton.disabled = false
 
