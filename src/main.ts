@@ -217,7 +217,7 @@ async function syncScannedIdToNotion(els: AppElements, scannedId: string) {
       data && typeof (data as any).doc === 'string' && (data as any).doc.trim() ? (data as any).doc.trim() : ''
     const docDisplay =
       doc.toLowerCase() === 'true' ? '✓' : doc.toLowerCase() === 'false' ? '✕' : doc
-    const docLine = docDisplay ? '' : ''
+    const docLine = docDisplay ? `\nรับเอกสาร: ${docDisplay}` : ''
 
     setDocCallout(els, doc)
 
