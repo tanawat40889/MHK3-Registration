@@ -146,6 +146,9 @@ function getEls(): AppElements {
 function setDocCallout(els: AppElements, docValue: string) {
   const doc = String(docValue ?? '').trim()
   if (!doc) {
+    const icon = els.dialogDoc.querySelector<HTMLSpanElement>('#dialogDocIcon')
+    if (icon) icon.textContent = '—'
+    delete els.dialogDoc.dataset.value
     els.dialogDoc.hidden = true
     return
   }
@@ -162,7 +165,7 @@ function setDocCallout(els: AppElements, docValue: string) {
 function showStatusDialog(els: AppElements, kind: 'success' | 'error' | 'loading', message: string) {
   els.statusDialog.dataset.status = kind
   els.statusDialog.setAttribute('aria-busy', kind === 'loading' ? 'true' : 'false')
-  els.dialogIcon.textContent = kind === 'success' ? '✓' : kind === 'error' ? '✕' : '⏳'
+  els.dialogIcon.textContent = kind === 'success' ? '' : kind === 'error' ? '' : '⏳'
   els.dialogStatus.textContent = message
   els.dialogClearButton.hidden = kind === 'loading'
   els.dialogClearButton.disabled = kind === 'loading'
@@ -313,7 +316,17 @@ function submitManualId(els: AppElements) {
   void syncScannedIdToNotion(els, value)
 }
 
-function clearAll(els: AppElements) {
+function resetDialogState(els: AppElements) {
+  els.statusDialog.dataset.status = ''
+  els.statusDialog.setAttribute('aria-busy', 'false')
+  els.dialogIcon.textContent = '—'
+  els.dialogStatus.textContent = '—'
+  setDocCallout(els, '')
+  els.dialogClearButton.hidden = false
+  els.dialogClearButton.disabled = false
+}
+
+function clearAll(els: AppElements, opts?: { closeDialog?: boolean }) {
   els.resultText.value = ''
   els.format.textContent = '—'
   els.status.textContent = 'พร้อมสำหรับสแกน.'
@@ -322,18 +335,15 @@ function clearAll(els: AppElements) {
   lastValue = null
   lastSyncedValue = null
 
-  els.statusDialog.dataset.status = ''
-  els.statusDialog.setAttribute('aria-busy', 'false')
-  els.dialogIcon.textContent = '—'
-  els.dialogStatus.textContent = '—'
-  setDocCallout(els, '')
-  els.dialogClearButton.hidden = false
-  els.dialogClearButton.disabled = false
+  resetDialogState(els)
 
-  try {
-    els.statusDialog.close()
-  } catch {
-    // ignore
+  const shouldClose = opts?.closeDialog !== false
+  if (shouldClose) {
+    try {
+      els.statusDialog.close()
+    } catch {
+      // ignore
+    }
   }
 }
 
@@ -445,6 +455,12 @@ const els = getEls()
 els.statusDialog.addEventListener('cancel', (e) => {
   // Keep the dialog open while a request is in flight.
   if (els.statusDialog.dataset.status === 'loading') e.preventDefault()
+})
+
+// If the dialog is closed via ESC/backdrop, also reset state.
+els.statusDialog.addEventListener('close', () => {
+  if (els.statusDialog.dataset.status === 'loading') return
+  clearAll(els, { closeDialog: false })
 })
 
 els.dialogClearButton.addEventListener('click', () => clearAll(els))
