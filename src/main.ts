@@ -156,7 +156,7 @@ function setDocCallout(els: AppElements, docValue: string) {
   const icon = els.dialogDoc.querySelector<HTMLSpanElement>('#dialogDocIcon')
   if (icon) {
     const v = doc.toLowerCase()
-    icon.textContent = v === 'true' ? '' : v === 'false' ? '' : doc
+    icon.textContent = v === 'true' ? '✓' : v === 'false' ? '✕' : doc
   }
   els.dialogDoc.hidden = false
   els.dialogDoc.dataset.value = doc.toLowerCase()
@@ -215,13 +215,10 @@ async function syncScannedIdToNotion(els: AppElements, scannedId: string) {
 
     const doc =
       data && typeof (data as any).doc === 'string' && (data as any).doc.trim() ? (data as any).doc.trim() : ''
-    const docDisplay =
-      doc.toLowerCase() === 'true' ? '✓' : doc.toLowerCase() === 'false' ? '✕' : doc
-    const docLine = docDisplay ? `\nรับเอกสาร: ${docDisplay}` : ''
 
     setDocCallout(els, doc)
 
-    const msg = `ผ่าน: ลงทะเบียน ID ${value} เรียบร้อยแล้ว${nameLine}${docLine}
+    const msg = `ผ่าน: ลงทะเบียน ID ${value} เรียบร้อยแล้ว${nameLine}
 กด “ย้อนกลับ” เพื่อสแกนรายการถัดไป`
     els.notionStatus.textContent = msg
     showStatusDialog(els, 'success', msg)
