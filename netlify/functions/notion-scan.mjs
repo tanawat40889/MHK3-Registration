@@ -277,6 +277,7 @@ export async function handler(event) {
   const lastNameCandidates = ['last name', 'lastname', 'surname', 'นามสกุล', 'สกุล']
   const fullNameCandidates = ['full name', 'fullname', 'name', 'ชื่อ-สกุล', 'ชื่อสกุล', 'ชื่อ นามสกุล']
   const docCandidates = ['doc', 'document', 'เอกสาร', 'docname', 'doc name']
+  const mainRoomCandidates = ['mainroom', 'main room', 'MainRoom', 'Main Room', 'ห้องหลัก']
 
   let firstName = await getCandidatePropertyText({
     token,
@@ -307,6 +308,13 @@ export async function handler(event) {
     candidates: docCandidates,
   })
 
+  const mainRoom = await getCandidatePropertyText({
+    token,
+    pageId: page.id,
+    properties: props,
+    candidates: mainRoomCandidates,
+  })
+
   if (!firstName && !lastName && fullName) {
     const split = splitFullName(fullName)
     firstName = split.firstName
@@ -325,6 +333,7 @@ export async function handler(event) {
     lastName,
     fullName,
     doc,
+    mainRoom,
   }
 
   if (debug) {

@@ -342,6 +342,7 @@ export default {
         const lastNameCandidates = ['last name', 'lastname', 'surname', 'นามสกุล', 'สกุล']
         const fullNameCandidates = ['full name', 'fullname', 'name', 'ชื่อ-สกุล', 'ชื่อสกุล', 'ชื่อ นามสกุล']
         const docCandidates = ['doc', 'document', 'เอกสาร', 'docname', 'doc name']
+        const mainRoomCandidates = ['mainroom', 'main room', 'MainRoom', 'Main Room', 'ห้องหลัก']
 
         let firstName = await getCandidatePropertyText(env, page.id, props, firstNameCandidates)
         let lastName = await getCandidatePropertyText(env, page.id, props, lastNameCandidates)
@@ -355,6 +356,7 @@ export default {
         fullName = fullName || [firstName, lastName].filter(Boolean).join(' ').trim()
 
         const doc = await getCandidatePropertyText(env, page.id, props, docCandidates)
+        const mainRoom = await getCandidatePropertyText(env, page.id, props, mainRoomCandidates)
 
         const responseBody: any = {
           ok: true,
@@ -366,6 +368,7 @@ export default {
           lastName,
           fullName,
           doc,
+          mainRoom,
         }
 
         if (debug) {

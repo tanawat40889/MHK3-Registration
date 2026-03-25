@@ -277,6 +277,15 @@ body {
   text-align: center;
 }
 
+.modalName {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #eef2ff;
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
 .docCallout {
   display: inline-flex;
   align-self: center;
@@ -306,6 +315,14 @@ body {
 
 .docCallout[data-value='false'] .docCalloutIcon {
   color: #ef4444;
+}
+
+.mainRoomWarning {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ef4444;
+  text-align: center;
 }
 
 @media (min-width: 900px) {

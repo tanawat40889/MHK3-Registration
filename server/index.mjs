@@ -253,6 +253,7 @@ app.post('/api/notion/scan', async (req, res) => {
     const lastNameCandidates = ['last name', 'lastname', 'surname', 'นามสกุล', 'สกุล']
     const fullNameCandidates = ['full name', 'fullname', 'name', 'ชื่อ-สกุล', 'ชื่อสกุล', 'ชื่อ นามสกุล']
     const docCandidates = ['doc', 'document', 'เอกสาร', 'docname', 'doc name']
+    const mainRoomCandidates = ['mainroom', 'main room', 'MainRoom', 'Main Room', 'ห้องหลัก']
 
     let firstName = await getCandidatePropertyText({
       notionClient: notion,
@@ -283,6 +284,13 @@ app.post('/api/notion/scan', async (req, res) => {
       candidates: docCandidates,
     })
 
+    const mainRoom = await getCandidatePropertyText({
+      notionClient: notion,
+      pageId: page.id,
+      properties: props,
+      candidates: mainRoomCandidates,
+    })
+
     if (!firstName && !lastName && fullName) {
       const split = splitFullName(fullName)
       firstName = split.firstName
@@ -301,6 +309,7 @@ app.post('/api/notion/scan', async (req, res) => {
       lastName,
       fullName,
       doc,
+      mainRoom,
     }
 
     if (debug === true) {

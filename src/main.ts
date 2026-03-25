@@ -15,7 +15,9 @@ type AppElements = {
   statusDialog: HTMLDialogElement
   dialogIcon: HTMLDivElement
   dialogStatus: HTMLParagraphElement
+  dialogName: HTMLParagraphElement
   dialogDoc: HTMLDivElement
+  dialogMainRoomWarning: HTMLParagraphElement
   dialogClearButton: HTMLButtonElement
 }
 
@@ -79,10 +81,12 @@ appRoot.innerHTML = `
     <div class="modalBody">
       <div id="dialogIcon" class="modalIcon" aria-hidden="true">—</div>
       <p id="dialogStatus" class="modalStatus">—</p>
+      <p id="dialogName" class="modalName" hidden></p>
       <div id="dialogDoc" class="docCallout" hidden>
         <span class="docCalloutLabel">รับเอกสาร</span>
         <span id="dialogDocIcon" class="docCalloutIcon" aria-hidden="true">—</span>
       </div>
+      <p id="dialogMainRoomWarning" class="mainRoomWarning" hidden>ไม่สะดวกเดินเปลี่ยนห้อง</p>
       <button id="dialogClear" type="button" class="btn btn-primary btn-wide">ย้อนกลับ</button>
     </div>
   </dialog>
@@ -102,7 +106,9 @@ function getEls(): AppElements {
   const statusDialog = document.querySelector<HTMLDialogElement>('#statusDialog')
   const dialogIcon = document.querySelector<HTMLDivElement>('#dialogIcon')
   const dialogStatus = document.querySelector<HTMLParagraphElement>('#dialogStatus')
+  const dialogName = document.querySelector<HTMLParagraphElement>('#dialogName')
   const dialogDoc = document.querySelector<HTMLDivElement>('#dialogDoc')
+  const dialogMainRoomWarning = document.querySelector<HTMLParagraphElement>('#dialogMainRoomWarning')
   const dialogClearButton = document.querySelector<HTMLButtonElement>('#dialogClear')
 
   if (
@@ -118,7 +124,9 @@ function getEls(): AppElements {
     !statusDialog ||
     !dialogIcon ||
     !dialogStatus ||
+    !dialogName ||
     !dialogDoc ||
+    !dialogMainRoomWarning ||
     !dialogClearButton
   ) {
     throw new Error('Failed to initialize UI elements')
@@ -138,7 +146,9 @@ function getEls(): AppElements {
     statusDialog,
     dialogIcon,
     dialogStatus,
+    dialogName,
     dialogDoc,
+    dialogMainRoomWarning,
     dialogClearButton,
   }
 }
@@ -211,16 +221,26 @@ async function syncScannedIdToNotion(els: AppElements, scannedId: string) {
         ? (data as any).fullName.trim()
         : ''
     const fullName = apiFullName || [firstName, lastName].filter(Boolean).join(' ').trim()
-    const nameLine = fullName ? `\nชื่อ-สกุล: ${fullName}` : ''
+
+    if (fullName) {
+      els.dialogName.textContent = fullName
+      els.dialogName.hidden = false
+    } else {
+      els.dialogName.hidden = true
+      els.dialogName.textContent = ''
+    }
 
     const doc =
       data && typeof (data as any).doc === 'string' && (data as any).doc.trim() ? (data as any).doc.trim() : ''
 
+    const mainRoom =
+      data && typeof (data as any).mainRoom === 'string' ? (data as any).mainRoom.trim().toLowerCase() : ''
+    els.dialogMainRoomWarning.hidden = mainRoom !== 'true'
+
     setDocCallout(els, doc)
 
-    const msg = `ผ่าน: ลงทะเบียน ID ${value} เรียบร้อยแล้ว${nameLine}
-กด “ย้อนกลับ” เพื่อสแกนรายการถัดไป`
-    els.notionStatus.textContent = msg
+    const msg = ``
+    els.notionStatus.textContent = fullName ? `${msg}\nชื่อ-สกุล: ${fullName}` : msg
     showStatusDialog(els, 'success', msg)
   } catch (e) {
     setDocCallout(els, '')
@@ -319,6 +339,9 @@ function resetDialogState(els: AppElements) {
   els.dialogIcon.textContent = '—'
   els.dialogStatus.textContent = '—'
   setDocCallout(els, '')
+  els.dialogName.hidden = true
+  els.dialogName.textContent = ''
+  els.dialogMainRoomWarning.hidden = true
   els.dialogClearButton.hidden = false
   els.dialogClearButton.disabled = false
 }
